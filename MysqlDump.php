@@ -8,56 +8,133 @@ $db_name = "skiforum_dati2";
 $link = mysql_connect($db_host,$db_user,$db_pass);
 mysql_select_db($db_name,$link);
 
-/* backup the db OR just a table */
-function backup_tables($tables = '*')
-{
+class __Exception {
+	public $who;
+	public $code;
+	public $msg;
 
-	$handle = fopen('./a/dump.sql', 'a');
-		//get all of the tables
-	if($tables == '*')
-	{
-		$tables = array();
-		$result = mysql_query('SHOW TABLES');
-		while($row = mysql_fetch_row($result))
-		{
-			$tables[] = $row[0];
+	function __construct($w, $c, $m) {
+		$this->who = $w;
+		$this->code = $c;
+		$this->msg = $m;
+	}
+
+	function toString() {
+		return $code.' - '.$msg."\n";
+	}
+}
+
+/*
+ * This is not how it is meant to be.
+ * TODO
+ * Add file / print support
+ */
+class __Stream {
+	$buffer = "";
+
+	public function push($what) {
+		$buffer .= $what;
+	}
+
+	public function pushln($what) {
+		$this->push($what."\n");
+	}
+}
+
+/*
+ * Mysql dumping
+ */
+class __Mysql {
+	private $username;
+	private $password;
+	private $host;
+	private $database;
+	private $port = null;
+
+	private function connect() {
+		$r = mysql_connect($this->host.(($this->port) ? ':'.$this->port : ''), $this->username, $this->password);
+
+		if(!$r) {
+			throw __Exception( __CLASS__, 0, 'Couldn\' connect to MySQL');
+			return FALSE;
+		}
+		
+		return TRUE;
+	}
+
+	private function dbselect() {
+		$r = mysql_select_db($this->database);
+
+		if(!$r) {
+			throw __Exception( __CLASS__, 1, 'Couldn\'t select the database' );
+			return FALSE;
+		}
+
+		return TRUE;
+	}
+		
+	function __construct($h, $u, $p, $n) {
+		// Checks
+		
+		$this->host = $h;
+		$this->username = $u;
+		$this->password = $p;
+		$this->port = $n;
+
+		try {
+			$this->connect();
+		} catch ( __Exception e ) {
+			print $e->toString();
+
+			// Terminate execution
 		}
 	}
-	else
-	{
-		$tables = is_array($tables) ? $tables : explode(',',$tables);
-	}
-
-	//cycle through
-	foreach($tables as $table)
-	{
-		$result = mysql_query('SELECT * FROM '.$table);
-		$num_fields = mysql_num_fields($result);
-
-		fwrite($handle, 'DROP TABLE '.$table.';');
-		$row2 = mysql_fetch_row(mysql_query('SHOW CREATE TABLE '.$table));
-		fwrite($handle, "\n\n".$row2[1].";\n\n");
-
-		for ($i = 0; $i < $num_fields; $i++) 
-		{
+	
+	function tableDump($tables = '*') {
+		$stream = new __Stream();
+		
+		if($tables == '*') {
+			$tables = array();
+			$result = mysql_query('SHOW TABLES');
 			while($row = mysql_fetch_row($result))
-			{
-				$return = 'INSERT INTO '.$table.' VALUES(';
-				for($j=0; $j<$num_fields; $j++) {
-					$row[$j] = addslashes($row[$j]);
-					$row[$j] = ereg_replace("\n","\\n",$row[$j]);
-					if (isset($row[$j])) { $return.= '"'.$row[$j].'"' ; } else { $return.= '""'; }
-					if ($j<($num_fields-1)) { $return.= ','; }
-				}
-				$return.= ");\n";
-			
-				fwrite($handle, $return);
-			}
+				$tables[] = $row[0];
+		} else {
+			$tables = is_array($tables) ? $tables : explode(',',$tables);
 		}
-		fwrite($handle, "\n\n\n");
-	}
 
-	fclose($handle);
+		//cycle through
+		foreach($tables as $table) {
+			$result = mysql_query('SELECT * FROM '.$table);
+			$num_fields = mysql_num_fields($result);
+
+			$stream->pushln('DROP TABLE '.$table.';');
+			
+			$row2 = mysql_fetch_row(mysql_query('SHOW CREATE TABLE '.$table));
+			$stream->push("\n\n".$row2[1].";\n\n");
+
+			for ($i = 0; $i < $num_fields; $i++)  {
+				while($row = mysql_fetch_row($result)) {
+					$return = 'INSERT INTO '.$table.' VALUES(';
+					
+					for($j=0; $j<$num_fields; $j++) {
+						$row[$j] = addslashes($row[$j]);
+						$row[$j] = ereg_replace("\n","\\n",$row[$j]);
+						
+						$return .= (isset($row[$j])) ? '"'.$row[$j].'"' : '""';
+
+						if($j<($num_fields-1))
+							$return.= ',';
+					}
+					
+					$stream->pushln($return.");");
+				}
+			}
+			
+			$stream->push("\n\n\n");
+		}
+
+		$stream->flush();
+	}
 }
 
 if(!array_key_exists('todo', $_GET)) die('?todo=');
