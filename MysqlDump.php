@@ -89,15 +89,20 @@ class __Mysql {
 			// Terminate execution
 		}
 	}
+
+	private function getTables() {
+		$tables = array();
+		$result = mysql_query('SHOW TABLES');
+		while($row = mysql_fetch_row($result))
+			$tables[] = $row[0];
+		return $tables;
+	}
 	
 	function tableDump($tables = '*') {
 		$stream = new __Stream();
 		
 		if($tables == '*') {
-			$tables = array();
-			$result = mysql_query('SHOW TABLES');
-			while($row = mysql_fetch_row($result))
-				$tables[] = $row[0];
+			$tables = $this->getTables();
 		} else {
 			$tables = is_array($tables) ? $tables : explode(',',$tables);
 		}
