@@ -56,7 +56,7 @@ class __File() {
 			return false;
 		}
 
-		if
+		//if()
 	}	
 }
 
