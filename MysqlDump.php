@@ -1,46 +1,4 @@
 <?
-# Configuro i parametri di accesso al mio DB
-$db_host = "localhost";
-$db_user = "skiforum_user01";
-$db_pass = "skiF7EDUMz2";
-$db_name = "skiforum_dati2";
-
-$link = mysql_connect($db_host,$db_user,$db_pass);
-mysql_select_db($db_name,$link);
-
-class __Exception {
-	public $who;
-	public $code;
-	public $msg;
-
-	function __construct($w, $c, $m) {
-		$this->who = $w;
-		$this->code = $c;
-		$this->msg = $m;
-	}
-
-	function toString() {
-		return $code.' - '.$msg."\n";
-	}
-}
-
-/*
- * This is not how it is meant to be.
- * TODO
- * Add file / print support
- */
-class __Stream {
-	$buffer = "";
-
-	public function push($what) {
-		$buffer .= $what;
-	}
-
-	public function pushln($what) {
-		$this->push($what."\n");
-	}
-}
-
 /*
  * Mysql dumping
  */
@@ -140,23 +98,6 @@ class __Mysql {
 
 		$stream->flush();
 	}
-}
-
-if(!array_key_exists('todo', $_GET)) die('?todo=');
-
-switch($_GET['todo']) {
-	case 'list':
-		$tmp = mysql_query("SHOW TABLES");
-		print "<pre>";
-		while($arr = mysql_fetch_assoc($tmp))
-			print $arr['Tables_in_skiforum_dati2']."\n";
-		print "</pre>";
-		
-		break;
-	default:
-		backup_tables($_GET['todo']);
-		print file_get_contents('./
-		break;
 }
 
 ?>

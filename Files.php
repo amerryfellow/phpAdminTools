@@ -55,8 +55,19 @@ class __File() {
 			throw __Exception( __CLASS__, 1, 'Stream provided isn\'t valid' );
 			return false;
 		}
+		
+		if(!$this->readable) {
+			throw __Exception( __CLASS__, 2, 'File not readable' );
+			return false;
+		}
 
-		//if()
+		if($this->type == self::DIR) {
+			$a = new __Directory( $this );
+			return $a->dump();
+		}
+		
+		if($this->type == self::FILE) {
+			$handle = fopen($this->path, 'rb');
 	}	
 }
 
