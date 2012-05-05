@@ -27,10 +27,10 @@ interface ___Stream {
 }
 
 class __Stream implements ___Stream {
-	$buffer = "";
+	private $buffer = "";
 
 	public function push($what) {
-		$buffer .= $what;
+		$this->buffer .= $what;
 	}
 
 	public function pushln($what) {
@@ -38,7 +38,7 @@ class __Stream implements ___Stream {
 	}
 
 	public function pull() {
-
+		return $this->buffer;
 	}
 }
 
