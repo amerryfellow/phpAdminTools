@@ -16,29 +16,24 @@ class __Exception {
 	}
 }
 
-/*
- * This is not how it is meant to be.
- * TODO
- * Add file / print support
- */
-interface ___Stream {
-	function push();
+interface ___InputStream {
 	function pull();
 }
 
-class __Stream implements ___Stream {
-	private $buffer = "";
+interface ___OutputStream {
+	function push($lol);
+}
 
+/*
+ * Output buffer - prints to screen
+ */
+class __Screen implements ___OutputStream {
 	public function push($what) {
-		$this->buffer .= $what;
+		print $what;
 	}
 
 	public function pushln($what) {
 		$this->push($what."\n");
-	}
-
-	public function pull() {
-		return $this->buffer;
 	}
 }
 

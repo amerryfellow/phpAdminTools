@@ -1,5 +1,5 @@
 <?
-class __File implements ___Stream {
+class __File implements ___InputStream implements ___OutputStream {
 	private $path;
 	private $info;
 	private $readable;
@@ -27,6 +27,23 @@ class __File implements ___Stream {
 		$this->update();
 	}
 
+	/*
+	 * self::OPEN
+	 * ---
+	 * WHAT YOU GOTTA USE
+	 */
+	static function open($path) {
+		if(@is_dir($path))
+			return new __Directory($path);
+		else
+			return new __File($path);
+	}
+
+	/*
+	 * UPDATE
+	 * ---
+	 * Updates file properties
+	 */
 	private function update() {
 		// Directory or File?
 		if(is_file($this->path))
@@ -54,7 +71,12 @@ class __File implements ___Stream {
 		}
 	}
 
-	private function read( $offset = 0, $length = 0 ) {
+	/*
+	 * READ
+	 * ---
+	 * Reads $length characters from a file, starting at offset $offset.
+	 */
+	public function read( $offset = 0, $length = 0 ) {
 		if($length = 0)
 			$length = $this->info['size'];
 
@@ -74,28 +96,12 @@ class __File implements ___Stream {
 		return fread($handle, $length);
 	}
 
-	public function pop($stream) {
-		if(!$this->isreadable) {
-			throw __Exception( __CLASS__, 3, 'File not readable' );
-			return false;
-		}
-
-		$cycles = ceil(($this->info['size'])/$this->MBS);
-		
-		for($i=0;$i<$cycles; $i++) {
-			$stream->push( $this->read( $i*$this->MBS, ($i+1)*$this->MBS) );
-		}
-	}
-
-	public function push($what) {
-		if(!$this->iswritable) {
-			throw __Exception( __CLASS__, 4, 'File not writable' );
-			return false;
-		}
-
-		// Do more
-	}
-
+	/*
+	 * WRITE
+	 * ---
+	 * Writes data $what into a file, starting at offset $offset.
+	 * If $offset == 'a', then it'll append $what to the file.
+	 */
 	private function write( $what, $offset = 0 ) {
 		if(!$this->writable) {
 			throw __Exception( __CLASS__, 4, 'File not writable' );
@@ -117,7 +123,7 @@ class __File implements ___Stream {
 	}
 
 	public function dump( $stream ) {
-		if(!$stream instanceof __Stream) {
+		if(!$stream instanceof __OutputStream) {
 			throw __Exception( __CLASS__, 1, 'Stream provided isn\'t valid' );
 			return false;
 		}
@@ -136,12 +142,45 @@ class __File implements ___Stream {
 			$this->pop($stream);
 		}
 	}
+
+	/*
+	 * POP
+	 * ---
+	 * Reads a file safely in chunks of the size specified by MBS ( Max Buffer Size )
+	 * and writes them in the stream $stream.
+	 */
+	public function pop($stream) {
+		if(!$this->isreadable) {
+			throw __Exception( __CLASS__, 3, 'File not readable' );
+			return false;
+		}
+
+		$cycles = ceil(($this->info['size'])/$this->MBS);
+		
+		for($i=0;$i<$cycles; $i++) {
+			$stream->push( $this->read( $i*$this->MBS, ($i+1)*$this->MBS) );
+		}
+	}
+
+	/*
+	 * PUSH
+	 * ---
+	 * Appends $what in a file.
+	 */
+	public function push($what) {
+		if(!$this->iswritable) {
+			throw __Exception( __CLASS__, 4, 'File not writable' );
+			return false;
+		}
+
+		$this->write($what, 'a');
+	}
 }
 
 class __Directory extends __File() {
 	private $tree;
 	private $index=0;
-	
+
 	function __construct( $tree_path ) {
 		if( !file_exists( $tree_path ) ) {
 			throw __Exception( __CLASS__, 0, 'Path doesn\' exist' );
@@ -152,7 +191,7 @@ class __Directory extends __File() {
 		$this->tree = array_slice(scandir( $tree_path ), 2);
 	}
 
-	function goThrough() {
+	private function goThrough() {
 		if($this->index == count( $this->tree )) {
 			$this->index = 0;
 			return FALSE;
@@ -162,6 +201,7 @@ class __Directory extends __File() {
 	}
 
 	function dump() {
-		
+		while($c = __File::open($this->goThrough()))
+			$c->dump();
 	}
 }
