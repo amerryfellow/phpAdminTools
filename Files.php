@@ -1,5 +1,13 @@
 <?
-class __File implements ___InputStream implements ___OutputStream {
+
+/**
+ * Provides an easy and secure stream to access files
+ * while taking care of possible memory exhaustions.
+ *
+ * @author		Andrea Paterno'
+ * @version		0.1
+ */
+class __File implements ___GenericStream {
 	private $path;
 	private $info;
 	private $readable;
@@ -72,9 +80,11 @@ class __File implements ___InputStream implements ___OutputStream {
 	}
 
 	/*
-	 * READ
-	 * ---
 	 * Reads $length characters from a file, starting at offset $offset.
+	 *
+	 * @param	$offset		Offset to start reading from
+	 * @param	$length		How many bytes to read
+	 * @return				Chosen portion of the file
 	 */
 	public function read( $offset = 0, $length = 0 ) {
 		if($length = 0)
@@ -97,10 +107,17 @@ class __File implements ___InputStream implements ___OutputStream {
 	}
 
 	/*
-	 * WRITE
-	 * ---
 	 * Writes data $what into a file, starting at offset $offset.
 	 * If $offset == 'a', then it'll append $what to the file.
+	 *
+	 * Notes:
+	 * This method does not take into account memory exhaustions,
+	 * because the problem relies on variable storings. Once a certain
+	 * $what is given, then we don't have to care about anything.
+	 *
+	 * @param	$what		Data to be written to file
+	 * @param	$offset		Offset in the file
+	 * @return				Number of bytes written
 	 */
 	private function write( $what, $offset = 0 ) {
 		if(!$this->writable) {
@@ -119,8 +136,17 @@ class __File implements ___InputStream implements ___OutputStream {
 
 		// Should include max buffer size?
 
-		fwrite($handle, $what);
+		return fwrite($handle, $what);
 	}
+
+	/**
+	 * Dump the file contents.
+	 *
+	 * @param	$stream			Stream to put the files contents in
+	 * @return					Nothing.
+	 * @throws	__Exception		Stream invalid
+	 * @throws	__Exception		File unreadable
+	 */
 
 	public function dump( $stream ) {
 		if(!$stream instanceof __OutputStream) {
@@ -144,10 +170,11 @@ class __File implements ___InputStream implements ___OutputStream {
 	}
 
 	/*
-	 * POP
-	 * ---
 	 * Reads a file safely in chunks of the size specified by MBS ( Max Buffer Size )
 	 * and writes them in the stream $stream.
+	 *
+	 * @param	$stream			Stream to put the file contents in
+	 * @throws	__Exception		File not readable
 	 */
 	public function pop($stream) {
 		if(!$this->isreadable) {
@@ -163,9 +190,10 @@ class __File implements ___InputStream implements ___OutputStream {
 	}
 
 	/*
-	 * PUSH
-	 * ---
-	 * Appends $what in a file.
+	 * Appends $what to file. Basically, just a synonym of the
+	 * write method. Write mode is append.
+	 *
+	 * @param	$what	What to append
 	 */
 	public function push($what) {
 		if(!$this->iswritable) {
@@ -176,6 +204,16 @@ class __File implements ___InputStream implements ___OutputStream {
 		$this->write($what, 'a');
 	}
 }
+
+/**
+ * Framework that provides useful but simple methods to access
+ * directories. It's strictly related to the __File class, of which
+ * is an extension, and provides additional methods, while overloading
+ * previous ones.
+ *
+ * @author		Andrea Paterno'
+ * @version		0.1
+ */
 
 class __Directory extends __File() {
 	private $tree;
@@ -191,6 +229,11 @@ class __Directory extends __File() {
 		$this->tree = array_slice(scandir( $tree_path ), 2);
 	}
 
+	/**
+	 * Go through a directory list.
+	 *
+	 * @return 		Element name
+	 */
 	private function goThrough() {
 		if($this->index == count( $this->tree )) {
 			$this->index = 0;
@@ -200,8 +243,13 @@ class __Directory extends __File() {
 		return $this->tree[ $this->index++ ];
 	}
 
-	function dump() {
+	/**
+	 * Dumps the contents of a directory into a stream.
+	 *
+	 * @param	$stream		Stream to dump the directory elements in
+	 */
+	function dump($stream) {
 		while($c = __File::open($this->goThrough()))
-			$c->dump();
+			$c->dump($stream);
 	}
 }

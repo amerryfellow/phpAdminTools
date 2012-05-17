@@ -24,6 +24,10 @@ interface ___OutputStream {
 	function push($lol);
 }
 
+interface ___GenericStream extends ___InputStream, ___OutputStream {
+	//
+}
+
 /*
  * Output buffer - prints to screen
  */
