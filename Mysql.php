@@ -3,7 +3,7 @@
  * Mysql
  */
 interface ___Database {
-	public function getTables();
+	public function listTables();
 	public function tableDump($a, $b);
 }
 
@@ -19,6 +19,7 @@ class __Mysql implements ___Database {
 	private $host;
 	private $database;
 	private $port = null;
+	private $link;
 
 	/**
 	 * Connects to the database.
@@ -26,10 +27,10 @@ class __Mysql implements ___Database {
 	 * @throws	__Exception		Couldn't connect to the database.
 	 */
 	private function connect() {
-		$r = mysql_connect($this->host.(($this->port) ? ':'.$this->port : ''), $this->username, $this->password);
+		$this->link = mysql_connect($this->host.(($this->port) ? ':'.$this->port : ''), $this->username, $this->password);
 
-		if(!$r) {
-			throw __Exception( __CLASS__, 0, 'Couldn\' connect to MySQL');
+		if(!$this->link) {
+			throw new __Exception( __CLASS__, 0, 'Couldn\' connect to MySQL');
 			return FALSE;
 		}
 
@@ -37,22 +38,45 @@ class __Mysql implements ___Database {
 	}
 
 	/**
-	 * Select the db.
+	 * Select a db.
 	 *
 	 * @throws	__Exception		Couldn't select the database.
 	 */
-	private function dbselect() {
-		$r = mysql_select_db($this->database);
+	public function dbSelect($db) {
+		$r = mysql_select_db($this->database = $db, $this->link);
 
 		if(!$r) {
-			throw __Exception( __CLASS__, 1, 'Couldn\'t select the database' );
+			throw new __Exception( __CLASS__, 1, mysql_error() );
 			return FALSE;
 		}
 
 		return TRUE;
 	}
 
-	function __construct($h, $u, $p, $n) {
+	/**
+	 * List Databases
+	 *
+	 * @return	Array list of databases
+	 */
+	public function listDatabases() {
+		$r = mysql_query("SHOW DATABASES");
+		
+		$a = array();
+		while($t = mysql_fetch_array($r))
+			$a[] = $t[0];
+
+		return $a;
+	}
+	
+	/**
+	 * Constructor
+	 *
+	 * @param	$h	Host
+	 * @param	$u	Username
+	 * @param	$p	Password
+	 * @param	$n	Port = 3360
+	 */
+	function __construct($h, $u, $p, $n=3360) {
 		// Checks
 
 		$this->host = $h;
@@ -74,7 +98,7 @@ class __Mysql implements ___Database {
 	 *
 	 * @return	Array list of the tables
 	 */
-	public function getTables() {
+	public function listTables() {
 		$tables = array();
 		$result = mysql_query('SHOW TABLES');
 		while($row = mysql_fetch_row($result))
@@ -88,16 +112,16 @@ class __Mysql implements ___Database {
 	 * @param	$table		Table to be dumped. '*' for all the tables.
 	 * @param	$stream		Stream to put the contents in
 	 */
-	public function tableDump($tables = '*', $stream) {
-		if(!($stream instanceof ___Stream)) {
-			throw __Exception( __CLASS__, 2, 'Stream not valid' );
+	public function tableDump($stream, $table = '*') {
+		if(!($stream instanceof ___OutputStream)) {
+			throw new __Exception( __CLASS__, 2, 'Stream not valid' );
 			return false;
 		}
 
-		if($tables == '*') {
-			$tables = $this->getTables();
+		if($table == '*') {
+			$tables = $this->listTables();
 		} else {
-			$tables = (is_array($tables)) ? $tables : explode(',',$tables);
+			$tables = (is_array($table)) ? array($table) : explode(',',$table);
 		}
 
 		//cycle through
@@ -116,9 +140,9 @@ class __Mysql implements ___Database {
 
 					for($j=0; $j<$num_fields; $j++) {
 						$row[$j] = addslashes($row[$j]);
-						$row[$j] = ereg_replace("\n","\\n",$row[$j]);
+						$row[$j] = str_replace("\n","\\n",$row[$j]);
 
-						$return .= (isset($row[$j])) ? '"'.$row[$j].'"' : '""';
+						$return .= '"'.$row[$j].'"';
 
 						if($j<($num_fields-1))
 							$return.= ',';
@@ -130,8 +154,6 @@ class __Mysql implements ___Database {
 
 			$stream->push("\n\n\n");
 		}
-
-		//$stream->flush();
 	}
 }
 

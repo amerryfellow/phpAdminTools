@@ -12,7 +12,7 @@ class __Exception extends Exception {
 	}
 
 	function toString() {
-		return $code.' - '.$msg."\n";
+		return $this->code.' - '.$this->msg."\n";
 	}
 }
 
@@ -36,6 +36,11 @@ class __Screen implements ___OutputStream {
 
 	public function __construct($type='text') {
 		$this->type = $type;
+		print '<pre>';
+	}
+
+	public function __destruct() {
+		print '</pre>';
 	}
 
 	public function push($what) {
