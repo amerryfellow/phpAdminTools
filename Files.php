@@ -5,15 +5,16 @@
  * while taking care of possible memory exhaustions.
  *
  * @author		Andrea Paterno'
- * @version		0.1
+ * @version		0.2
  */
 class __File implements ___GenericStream {
-	private $path;
-	private $info;
-	private $readable;
-	private $writable;
-	private $executable;
-	private $type;
+	public $path;
+	public $name;
+	public $info;
+	public $type;
+	public $readable;
+	public $writable;
+	public $executable;
 	private $tmprhandle;
 	
 	const FILE = 0;
@@ -25,12 +26,19 @@ class __File implements ___GenericStream {
 	public $MBS = 1000;
 		
 	function __construct($path) {
-		$this->path = $path;
-
-		if(!file_exists($path)) {
-			throw __Exception( __CLASS__, 0, 'File doesn\'t exist!' );
+		$this->path = ($path[0] == '.') ? realpath($path) : $path;;
+		
+		if(!file_exists($this->path)) {
+			throw new __Exception( __CLASS__, 0, 'File doesn\'t exist!' );
 			return;
 		}
+		
+		// Preg too slow.
+		for($i=strlen($this->path)-1;$i>=0;$i--) {
+			if($this->path[$i] == '/') break;
+			$this->name .= $this->path[$i];
+		}
+		$this->name = strrev($this->name);
 
 		$this->update();
 	}
@@ -87,16 +95,16 @@ class __File implements ___GenericStream {
 	 * @return				Chosen portion of the file
 	 */
 	public function read( $offset = 0, $length = 0 ) {
-		if($length = 0)
+		if($length == 0)
 			$length = $this->info['size'];
 
-		if(!$this->isreadable) {
-			throw __Exception( __CLASS__, 2, 'File not readable' );
+		if(!$this->readable) {
+			throw new __Exception( __CLASS__, 2, 'File not readable' );
 			return false;
 		}
 		
 		if($length > $this->MBS) {
-			throw __Exception( __CLASS__, 3, 'Specified bytes '.$length.' exceed maximum buffer size ('.$this->MBS.')');
+			throw new __Exception( __CLASS__, 3, 'Specified bytes '.$length.' exceed maximum buffer size ('.$this->MBS.')');
 			return false;
 		}
 
@@ -177,15 +185,15 @@ class __File implements ___GenericStream {
 	 * @throws	__Exception		File not readable
 	 */
 	public function pop($stream) {
-		if(!$this->isreadable) {
-			throw __Exception( __CLASS__, 3, 'File not readable' );
+		if(!$this->readable) {
+			throw new __Exception( __CLASS__, 3, 'File not readable' );
 			return false;
 		}
 
 		$cycles = ceil(($this->info['size'])/$this->MBS);
 		
 		for($i=0;$i<$cycles; $i++) {
-			$stream->push( $this->read( $i*$this->MBS, ($i+1)*$this->MBS) );
+			$stream->push( $this->read( $i*$this->MBS, $this->MBS) );
 		}
 	}
 
@@ -196,7 +204,7 @@ class __File implements ___GenericStream {
 	 * @param	$what	What to append
 	 */
 	public function push($what) {
-		if(!$this->iswritable) {
+		if(!$this->writable) {
 			throw __Exception( __CLASS__, 4, 'File not writable' );
 			return false;
 		}
@@ -215,7 +223,7 @@ class __File implements ___GenericStream {
  * @version		0.1
  */
 
-class __Directory extends __File() {
+class __Directory extends __File {
 	private $tree;
 	private $index=0;
 
@@ -234,13 +242,21 @@ class __Directory extends __File() {
 	 *
 	 * @return 		Element name
 	 */
-	private function goThrough() {
+	public function goThrough() {
 		if($this->index == count( $this->tree )) {
 			$this->index = 0;
+
 			return FALSE;
 		}
 
-		return $this->tree[ $this->index++ ];
+		try {
+			$tmp = __File::open($this->path.'/'.$this->tree[ $this->index++ ]);
+		} catch ( __Exception $e ) {
+			print $e->msg;
+			die('dead');
+		}
+
+		return $tmp;
 	}
 
 	/**
@@ -249,7 +265,9 @@ class __Directory extends __File() {
 	 * @param	$stream		Stream to dump the directory elements in
 	 */
 	function dump($stream) {
-		while($c = __File::open($this->goThrough()))
+		while($c = $this->goThrough())
 			$c->dump($stream);
 	}
 }
+
+?>

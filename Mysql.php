@@ -3,8 +3,8 @@
  * Mysql
  */
 interface ___Database {
-	public getTables();
-	public tableDump();
+	public function getTables();
+	public function tableDump($a, $b);
 }
 
 /**
@@ -32,7 +32,7 @@ class __Mysql implements ___Database {
 			throw __Exception( __CLASS__, 0, 'Couldn\' connect to MySQL');
 			return FALSE;
 		}
-		
+
 		return TRUE;
 	}
 
@@ -51,10 +51,10 @@ class __Mysql implements ___Database {
 
 		return TRUE;
 	}
-		
+
 	function __construct($h, $u, $p, $n) {
 		// Checks
-		
+
 		$this->host = $h;
 		$this->username = $u;
 		$this->password = $p;
@@ -62,7 +62,7 @@ class __Mysql implements ___Database {
 
 		try {
 			$this->connect();
-		} catch ( __Exception e ) {
+		} catch ( __Exception $e ) {
 			print $e->toString();
 
 			// Terminate execution
@@ -74,28 +74,30 @@ class __Mysql implements ___Database {
 	 *
 	 * @return	Array list of the tables
 	 */
-	private function getTables() {
+	public function getTables() {
 		$tables = array();
 		$result = mysql_query('SHOW TABLES');
 		while($row = mysql_fetch_row($result))
 			$tables[] = $row[0];
 		return $tables;
 	}
-	
+
 	/**
 	 * Dumps the contents of a table/more tables.
 	 *
 	 * @param	$table		Table to be dumped. '*' for all the tables.
 	 * @param	$stream		Stream to put the contents in
 	 */
-	function tableDump($tables = '*', $stream) {
-		if(!($stream instanceof ___Stream())) {
+	public function tableDump($tables = '*', $stream) {
+		if(!($stream instanceof ___Stream)) {
 			throw __Exception( __CLASS__, 2, 'Stream not valid' );
-		
+			return false;
+		}
+
 		if($tables == '*') {
 			$tables = $this->getTables();
 		} else {
-			$tables = is_array($tables) ? $tables : explode(',',$tables);
+			$tables = (is_array($tables)) ? $tables : explode(',',$tables);
 		}
 
 		//cycle through
@@ -104,28 +106,28 @@ class __Mysql implements ___Database {
 			$num_fields = mysql_num_fields($result);
 
 			$stream->pushln('DROP TABLE '.$table.';');
-			
+
 			$row2 = mysql_fetch_row(mysql_query('SHOW CREATE TABLE '.$table));
 			$stream->push("\n\n".$row2[1].";\n\n");
 
 			for ($i = 0; $i < $num_fields; $i++)  {
 				while($row = mysql_fetch_row($result)) {
 					$return = 'INSERT INTO '.$table.' VALUES(';
-					
+
 					for($j=0; $j<$num_fields; $j++) {
 						$row[$j] = addslashes($row[$j]);
 						$row[$j] = ereg_replace("\n","\\n",$row[$j]);
-						
+
 						$return .= (isset($row[$j])) ? '"'.$row[$j].'"' : '""';
 
 						if($j<($num_fields-1))
 							$return.= ',';
 					}
-					
+
 					$stream->pushln($return.");");
 				}
 			}
-			
+
 			$stream->push("\n\n\n");
 		}
 

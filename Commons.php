@@ -1,6 +1,6 @@
 <?
-
-class __Exception {
+// Does this class make sense? Why not use Exception?
+class __Exception extends Exception {
 	public $who;
 	public $code;
 	public $msg;
@@ -17,7 +17,7 @@ class __Exception {
 }
 
 interface ___InputStream {
-	function pull();
+	function pop($lol);
 }
 
 interface ___OutputStream {
@@ -32,8 +32,14 @@ interface ___GenericStream extends ___InputStream, ___OutputStream {
  * Output buffer - prints to screen
  */
 class __Screen implements ___OutputStream {
+	private $type;
+
+	public function __construct($type='text') {
+		$this->type = $type;
+	}
+
 	public function push($what) {
-		print $what;
+		print ($this->type == 'html') ? htmlentities($what) : $what;
 	}
 
 	public function pushln($what) {
