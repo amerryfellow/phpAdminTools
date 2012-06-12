@@ -72,13 +72,13 @@ class __File implements ___GenericStream {
 			$this->type = self::WTF;
 		
 		// Readable?
-		$this->readable = is_readable($this->path);
+		$this->readable = (is_readable($this->path)) ? 1: 0;
 
 		// Writable?
-		$this->writable = is_writable($this->path);
+		$this->writable = (is_writable($this->path)) ? 1 : 0;
 
 		// Executable?
-		$this->executable = is_executable($this->path);
+		$this->executable = (is_executable($this->path)) ? 1 : 0;
 
 		if($this->readable) {
 			$h = fopen($this->path, 'r');

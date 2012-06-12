@@ -84,13 +84,7 @@ class __Mysql implements ___Database {
 		$this->password = $p;
 		$this->port = $n;
 
-		try {
-			$this->connect();
-		} catch ( __Exception $e ) {
-			print $e->toString();
-
-			// Terminate execution
-		}
+		$this->connect();
 	}
 
 	/**
